@@ -509,6 +509,30 @@
       transition: opacity 0.2s;
     }
     .chat-input-row button:hover { opacity: 0.9; }
+    .mic-btn {
+      background: #1a1a1a;
+      border: 1px solid #222;
+      border-radius: 10px;
+      color: #e0e0e0;
+      font-size: 1rem;
+      padding: 0 12px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+    .mic-btn:hover { border-color: #f5c518; }
+    .mic-btn.recording {
+      background: #e23b3b;
+      color: #fff;
+      border-color: #e23b3b;
+      animation: recpulse 1s infinite;
+    }
+    @keyframes recpulse { 50% { opacity: 0.55; } }
+    .chat-messages audio {
+      display: block;
+      max-width: 220px;
+      height: 34px;
+      margin-top: 2px;
+    }
     .splash {
       position: fixed;
       inset: 0;
@@ -662,6 +686,7 @@
     </div>
     <div class="chat-messages" id="chat-messages"></div>
     <div class="chat-input-row">
+      <button id="chat-mic" class="mic-btn" title="Ses kaydet">🎤</button>
       <input type="text" id="chat-input" placeholder="Mesaj yaz..." autocomplete="off">
       <button id="chat-send">Gönder</button>
     </div>
@@ -1009,10 +1034,17 @@
         const sender = document.createElement('span');
         sender.className = 'sender';
         sender.textContent = m.user || '?';
-        const text = document.createElement('span');
-        text.textContent = m.text;
         div.appendChild(sender);
-        div.appendChild(text);
+        if (m.type === 'audio' && m.audio) {
+          const audio = document.createElement('audio');
+          audio.controls = true;
+          audio.src = m.audio;
+          div.appendChild(audio);
+        } else {
+          const text = document.createElement('span');
+          text.textContent = m.text;
+          div.appendChild(text);
+        }
         if (d && !isNaN(d.getTime())) {
           const time = document.createElement('span');
           time.className = 'msg-time';
@@ -1038,6 +1070,7 @@
       if (!text) return;
       db.collection('messages').add({
         user: currentUser,
+        type: 'text',
         text: text,
         time: firebase.firestore.FieldValue.serverTimestamp()
       }).then(() => {}).catch(err => {
@@ -1049,6 +1082,79 @@
     chatSend.addEventListener('click', sendMessage);
     chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
     chatClose.addEventListener('click', () => chatPanel.classList.remove('open'));
+
+    const chatMic = document.getElementById('chat-mic');
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let recStream = null;
+    let recTimer = null;
+    let recStart = 0;
+    const MAX_REC_MS = 60000;
+    const MAX_RAW = 700000;
+
+    function micSupported() {
+      return !!(window.MediaRecorder && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    }
+    function pickMime() {
+      const list = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac', 'audio/mpeg'];
+      for (const t of list) { try { if (MediaRecorder.isTypeSupported(t)) return t; } catch (e) {} }
+      return '';
+    }
+    function startRecording() {
+      if (!micSupported()) { alert('Bu tarayıcı ses kaydını desteklemiyor.'); return; }
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        recStream = stream;
+        audioChunks = [];
+        const mime = pickMime();
+        mediaRecorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = e => { if (e.data && e.data.size) audioChunks.push(e.data); };
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+          if (recStream) recStream.getTracks().forEach(t => t.stop());
+          sendAudio(blob);
+        };
+        mediaRecorder.start(200);
+        chatMic.classList.add('recording');
+        chatMic.textContent = '⏹';
+        recStart = Date.now();
+        recTimer = setInterval(() => {
+          const s = Math.floor((Date.now() - recStart) / 1000);
+          chatMic.title = 'Kaydediliyor ' + s + 'sn';
+          if (s >= MAX_REC_MS / 1000) stopRecording();
+        }, 500);
+      }).catch(err => {
+        alert('Mikrofon açılamadı: ' + (err && err.message ? err.message : err));
+      });
+    }
+    function stopRecording() {
+      if (recTimer) { clearInterval(recTimer); recTimer = null; }
+      chatMic.classList.remove('recording');
+      chatMic.textContent = '🎤';
+      chatMic.title = 'Ses kaydet';
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    }
+    function sendAudio(blob) {
+      if (!blob || !blob.size) return;
+      if (blob.size > MAX_RAW) { alert('Ses mesajı çok büyük. En fazla 60 sn kaydedebilirsin.'); return; }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result;
+        db.collection('messages').add({
+          user: currentUser,
+          type: 'audio',
+          audio: dataUrl,
+          mime: blob.type,
+          time: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(() => {}).catch(err => {
+          chatMessages.innerHTML = '<div class="chat-empty">Ses gönderilemedi: ' + (err && err.message ? err.message : err) + '</div>';
+        });
+      };
+      reader.readAsDataURL(blob);
+    }
+    chatMic.addEventListener('click', () => {
+      if (!mediaRecorder || mediaRecorder.state === 'inactive') startRecording();
+      else stopRecording();
+    });
 
     const API_URL = 'https://yks-sayac.onrender.com';
     if (!location.hostname.includes('localhost') && !location.hostname.includes('127.0.0.1') && !location.hostname.includes('::1')) {
