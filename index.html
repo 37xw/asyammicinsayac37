@@ -987,7 +987,9 @@
             time.className = 'msg-time';
             const hh = String(d.getHours()).padStart(2, '0');
             const mm = String(d.getMinutes()).padStart(2, '0');
-            time.textContent = hh + ':' + mm;
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mo = String(d.getMonth() + 1).padStart(2, '0');
+            time.textContent = hh + ':' + mm + ' · ' + dd + '.' + mo;
             div.appendChild(time);
           }
         }
