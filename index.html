@@ -310,14 +310,15 @@
     .net-note { font-size: 0.72rem; color: #888; margin: 0 0 14px; text-align: center; }
     .net-block { margin-bottom: 16px; }
     .net-block h4 { color: #f5c518aa; margin: 0 0 8px; font-size: 0.82rem; letter-spacing: 1px; }
-    .net-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 0.85rem; }
+    .net-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 0.85rem; flex-wrap: wrap; }
     .net-name { width: 150px; flex-shrink: 0; }
     .net-row label { display: flex; align-items: center; gap: 3px; font-size: 0.7rem; color: #999; }
     .net-row input {
       width: 52px; background: #0a0a0a; border: 1px solid #222; border-radius: 8px;
       color: #e0e0e0; padding: 5px; text-align: center; font-size: 0.85rem;
     }
-    .net-val { margin-left: auto; color: #f5c518; font-weight: 700; min-width: 52px; text-align: right; }
+    .net-val { margin-left: auto; color: #f5c518; font-weight: 700; min-width: 52px; text-align: right; white-space: nowrap; }
+    .net-bos { color: #7a7a7a; font-size: 0.72rem; margin-left: 8px; min-width: 48px; white-space: nowrap; }
     .net-section select {
       width: 100%; margin-bottom: 10px; background: #0a0a0a; color: #e0e0e0;
       border: 1px solid #222; border-radius: 8px; padding: 8px; font-size: 0.9rem;
@@ -1403,6 +1404,12 @@
       dil: { tr:1.53, sb:1.62, tm:1.77, fb:1.37, yd:2.60 }
     };
     const START = { tyt:145.47, say:132.87, ea:129.34, soz:129.61, dil:105.92 };
+    const QMAX = {
+      tr:40, sb:20, tm:40, fb:20,
+      mat:40, fiz:14, kim:13, biy:13,
+      edb:24, tar1:10, cograf1:6, tar2:11, cograf2:11, fel:12, dkab:6,
+      yd:80
+    };
 
     function buildRows(container, defs) {
       container.innerHTML = '';
@@ -1410,10 +1417,11 @@
         const row = document.createElement('div');
         row.className = 'net-row';
         row.dataset.key = d.key;
+        const max = QMAX[d.key];
         row.innerHTML = '<span class="net-name">' + d.name + '</span>' +
-          '<label>Doğru<input type="number" class="net-dogru" min="0" value="0"></label>' +
-          '<label>Yanlış<input type="number" class="net-yanlis" min="0" value="0"></label>' +
-          '<span class="net-val">0,00</span>';
+          '<label>Doğru<input type="number" class="net-dogru" min="0" max="' + max + '" value="0"></label>' +
+          '<label>Yanlış<input type="number" class="net-yanlis" min="0" max="' + max + '" value="0"></label>' +
+          '<span class="net-val">0,00</span><span class="net-bos">Boş: ' + max + '</span>';
         container.appendChild(row);
       });
     }
@@ -1421,10 +1429,12 @@
       const nets = {};
       document.querySelectorAll('#tyt-tests .net-row, #ayt-tests .net-row').forEach(row => {
         const k = row.dataset.key;
-        const d = parseFloat(row.querySelector('.net-dogru').value) || 0;
-        const y = parseFloat(row.querySelector('.net-yanlis').value) || 0;
+        const max = QMAX[k];
+        const d = Math.max(0, parseFloat(row.querySelector('.net-dogru').value) || 0);
+        const y = Math.max(0, parseFloat(row.querySelector('.net-yanlis').value) || 0);
         let net = d - y / 4; if (net < 0) net = 0;
         row.querySelector('.net-val').textContent = net.toFixed(2).replace('.', ',');
+        row.querySelector('.net-bos').textContent = 'Boş: ' + Math.max(0, max - d - y);
         nets[k] = net;
       });
       return nets;
@@ -1451,7 +1461,22 @@
 
     netType.addEventListener('change', rebuildAyt);
     netDiploma.addEventListener('input', recalc);
-    document.addEventListener('input', (e) => { if (e.target.classList && (e.target.classList.contains('net-dogru') || e.target.classList.contains('net-yanlis'))) recalc(); });
+    document.addEventListener('input', (e) => {
+      if (e.target.classList && (e.target.classList.contains('net-dogru') || e.target.classList.contains('net-yanlis'))) {
+        const row = e.target.closest('.net-row');
+        const k = row.dataset.key;
+        const max = QMAX[k];
+        const dEl = row.querySelector('.net-dogru');
+        const yEl = row.querySelector('.net-yanlis');
+        let d = Math.max(0, parseFloat(dEl.value) || 0);
+        let y = Math.max(0, parseFloat(yEl.value) || 0);
+        if (d + y > max) {
+          if (e.target.classList.contains('net-dogru')) { d = Math.max(0, max - y); dEl.value = d; }
+          else { y = Math.max(0, max - d); yEl.value = y; }
+        }
+        recalc();
+      }
+    });
 
     buildRows(tytTests, TEST_DEFS.tyt);
     rebuildAyt();
