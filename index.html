@@ -257,6 +257,33 @@
       color: #444;
       font-size: 0.85rem;
     }
+    .top-right-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 100;
+      width: 65px;
+      height: 65px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #111;
+      border: 1px solid #f5c51844;
+      color: #f5c518;
+      font-size: 1.6rem;
+      font-weight: 900;
+      letter-spacing: 1px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+      box-shadow: 0 0 20px rgba(245,197,24,0.15);
+    }
+    .top-right-btn:hover {
+      transform: scale(1.1) rotate(5deg);
+      border-color: #f5c518;
+      box-shadow: 0 0 30px rgba(245,197,24,0.4);
+    }
     .splash {
       position: fixed;
       inset: 0;
@@ -384,6 +411,8 @@
     <img src="https://1000logos.net/wp-content/uploads/2016/10/Batman-Logo-1.png" alt="Batman Logo">
     <div class="splash-text">37</div>
   </div>
+
+  <a class="top-right-btn" href="https://37xw.github.io/asyammicinsayac37" target="_blank" title="37">37</a>
 
   <div class="container" id="site-content">
     <header>
