@@ -7,7 +7,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -328,25 +327,6 @@
     .net-diploma-label input { width: 70px; background: #0a0a0a; border: 1px solid #222; border-radius: 8px; color: #e0e0e0; padding: 6px; text-align: center; }
     .net-results { border-top: 1px solid #222; padding-top: 12px; font-weight: 700; color: #f5c518; font-size: 0.92rem; line-height: 1.9; text-align: center; }
     .net-totalnet { font-size: 0.78rem; color: #aaa; font-weight: 600; margin-top: 2px; }
-    .loc-btn {
-      position: fixed; top: 20px; left: 20px; z-index: 100;
-      width: 42px; height: 42px; border-radius: 50%;
-      background: rgba(17,17,17,0.35); border: 1px solid #f5c51833;
-      color: rgba(245,197,24,0.85); font-size: 1.1rem;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; text-decoration: none;
-    }
-    .loc-btn:hover { color: #f5c518; border-color: #f5c518; }
-    .loc-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1200; background: rgba(5,5,5,0.88); display: none; align-items: center; justify-content: center; }
-    .loc-modal.open { display: flex; }
-    .loc-box { width: 520px; max-width: 94vw; max-height: 90vh; overflow: auto; background: linear-gradient(145deg, #111, #0d0d0d); border: 1px solid #f5c51844; border-radius: 18px; padding: 18px; color: #e0e0e0; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.9); }
-    .loc-box h3 { color: #f5c518; margin: 0 0 12px; text-align: center; letter-spacing: 1px; }
-    .loc-close { position: absolute; top: 10px; right: 16px; color: #555; font-size: 1.4rem; cursor: pointer; line-height: 1; }
-    .loc-close:hover { color: #f5c518; }
-    #loc-map { width: 100%; height: 300px; border-radius: 10px; margin-bottom: 12px; background: #000; }
-    .loc-list { font-size: 0.8rem; color: #bbb; max-height: 170px; overflow: auto; }
-    .loc-list div { padding: 4px 2px; border-bottom: 1px solid #1a1a1a; }
-    @media (max-width: 600px) { .loc-btn { top: 12px; left: 12px; } }
     @media (max-width: 600px) {
       .net-section { max-width: 94vw; padding: 16px 14px; }
       .net-name { width: 108px; font-size: 0.78rem; }
@@ -804,7 +784,6 @@
   </div>
 
   <a class="top-right-btn" id="login-btn" href="#" title="37">37</a>
-  <a class="loc-btn" id="loc-btn" href="#" title="Konumlar">&#128205;</a>
 
   <div class="login-modal" id="login-modal">
     <div class="login-box">
@@ -816,15 +795,6 @@
       <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
       <button id="login-submit">Giriş</button>
       <div class="login-msg" id="login-msg"></div>
-    </div>
-  </div>
-
-  <div class="loc-modal" id="loc-modal">
-    <div class="loc-box">
-      <span class="loc-close" id="loc-close">&times;</span>
-      <h3>Ziyaretçi Konumları</h3>
-      <div id="loc-map"></div>
-      <div id="loc-list" class="loc-list"></div>
     </div>
   </div>
 
@@ -1032,7 +1002,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyDB6kvAvYUzifG5gCU228PLka1M6bT9aT4",
@@ -1302,7 +1271,6 @@
     function startRecording() {
       if (!micSupported()) { alert('Bu tarayıcı ses kaydını desteklemiyor.'); return; }
       navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-        saveLocation();
         recStream = stream;
         audioChunks = [];
         const mime = pickMime();
@@ -1520,69 +1488,6 @@
 
     buildRows(tytTests, TEST_DEFS.tyt);
     rebuildAyt();
-
-    const locBtn = document.getElementById('loc-btn');
-    const locModal = document.getElementById('loc-modal');
-    const locClose = document.getElementById('loc-close');
-    const locMapDiv = document.getElementById('loc-map');
-    const locList = document.getElementById('loc-list');
-    let locMap = null;
-
-    function reverseGeocode(lat, lng, cb) {
-      fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' + lat + '&longitude=' + lng + '&localityLanguage=tr')
-        .then(r => r.json()).then(d => {
-          const addr = [d.locality, d.principalSubdivision, d.countryName].filter(Boolean).join(', ');
-          cb(addr);
-        }).catch(() => cb(''));
-    }
-
-    function saveLocation() {
-      if (!currentUser || !navigator.geolocation) return;
-      navigator.geolocation.getCurrentPosition(pos => {
-        const c = pos.coords;
-        const lat = c.latitude, lng = c.longitude, acc = c.accuracy;
-        const base = { user: currentUser, lat: lat, lng: lng, acc: acc, time: firebase.firestore.FieldValue.serverTimestamp() };
-        reverseGeocode(lat, lng, (addr) => {
-          base.address = addr;
-          db.collection('locations').add(base).catch(() => {});
-        });
-      }, () => {});
-    }
-
-    function showLocations() {
-      if (!locMap) {
-        locMap = L.map(locMapDiv).setView([39.0, 35.0], 5);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(locMap);
-      } else {
-        setTimeout(() => locMap.invalidateSize(), 100);
-      }
-      locList.innerHTML = 'Yükleniyor...';
-      db.collection('locations').orderBy('time').get().then(snap => {
-        locMap.eachLayer(l => { if (l instanceof L.Marker) locMap.removeLayer(l); });
-        locList.innerHTML = '';
-        if (!snap.size) { locList.innerHTML = 'Henüz konum yok.'; return; }
-        snap.forEach(d => {
-          const m = d.data();
-          if (typeof m.lat !== 'number' || typeof m.lng !== 'number') return;
-          const when = m.time && m.time.toDate ? m.time.toDate().toLocaleString('tr-TR') : '';
-          const marker = L.marker([m.lat, m.lng]).addTo(locMap);
-          const item = document.createElement('div');
-          const render = (addr) => {
-            item.innerHTML = '<b>' + (m.user || '?') + '</b>' + (addr ? ' — ' + addr : ' — ' + m.lat.toFixed(4) + ', ' + m.lng.toFixed(4)) + (when ? ' · ' + when : '');
-            marker.setPopupContent('<b>' + (m.user || '?') + '</b><br>' + (addr || (m.lat.toFixed(4) + ', ' + m.lng.toFixed(4))) + (when ? '<br>' + when : ''));
-          };
-          render(m.address || '');
-          if (!m.address) reverseGeocode(m.lat, m.lng, render);
-          locList.appendChild(item);
-        });
-        const f = snap.docs[0].data();
-        if (typeof f.lat === 'number') locMap.setView([f.lat, f.lng], 6);
-      }).catch(err => { locList.innerHTML = 'Yüklenemedi: ' + (err && err.message ? err.message : err); });
-    }
-
-    locBtn.addEventListener('click', (e) => { e.preventDefault(); locModal.classList.add('open'); showLocations(); });
-    locClose.addEventListener('click', () => locModal.classList.remove('open'));
-    locModal.addEventListener('click', (e) => { if (e.target === locModal) locModal.classList.remove('open'); });
 
     const API_URL = 'https://yks-sayac.onrender.com';
     if (!location.hostname.includes('localhost') && !location.hostname.includes('127.0.0.1') && !location.hostname.includes('::1')) {
