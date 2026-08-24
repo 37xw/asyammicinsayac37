@@ -457,6 +457,13 @@
       font-weight: 700;
       letter-spacing: 1px;
     }
+    .chat-msg .msg-time {
+      display: block;
+      font-size: 0.6rem;
+      opacity: 0.5;
+      margin-top: 3px;
+      text-align: right;
+    }
     .chat-empty {
       margin: auto;
       color: #444;
@@ -972,6 +979,18 @@
         text.textContent = m.text;
         div.appendChild(sender);
         div.appendChild(text);
+        if (m.time) {
+          let d = null;
+          try { d = (typeof m.time.toDate === 'function') ? m.time.toDate() : new Date(m.time); } catch (e) { d = null; }
+          if (d && !isNaN(d.getTime())) {
+            const time = document.createElement('span');
+            time.className = 'msg-time';
+            const hh = String(d.getHours()).padStart(2, '0');
+            const mm = String(d.getMinutes()).padStart(2, '0');
+            time.textContent = hh + ':' + mm;
+            div.appendChild(time);
+          }
+        }
         chatMessages.appendChild(div);
       });
       chatMessages.scrollTop = chatMessages.scrollHeight;
