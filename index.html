@@ -1254,8 +1254,8 @@
     let recStream = null;
     let recTimer = null;
     let recStart = 0;
-    const MAX_REC_MS = 60000;
-    const MAX_RAW = 700000;
+    const MAX_REC_MS = 120000;
+    const MAX_RAW = 900000;
     let pending = null;
 
     function micSupported() {
@@ -1277,7 +1277,7 @@
         mediaRecorder.onstop = () => {
           const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
           if (recStream) recStream.getTracks().forEach(t => t.stop());
-          if (blob.size > MAX_RAW) { alert('Ses mesajı çok büyük. En fazla 60 sn kaydedebilirsin.'); return; }
+          if (blob.size > MAX_RAW) { alert('Ses dosyası büyük, gönderilirken sorun olabilir.'); }
           const reader = new FileReader();
           reader.onload = () => { pending = { kind: 'audio', dataUrl: reader.result, mime: blob.type }; renderPending(); };
           reader.readAsDataURL(blob);
@@ -1289,7 +1289,7 @@
         recTimer = setInterval(() => {
           const s = Math.floor((Date.now() - recStart) / 1000);
           chatMic.title = 'Kaydediliyor ' + s + 'sn';
-          if (s >= MAX_REC_MS / 1000) stopRecording();
+          if (s >= MAX_REC_MS / 1000) { stopRecording(); alert('Süre doldu (120 sn), kayıt otomatik durduruldu. Sesi Gönder ile yollayabilirsin.'); }
         }, 500);
       }).catch(err => {
         alert('Mikrofon açılamadı: ' + (err && err.message ? err.message : err));
