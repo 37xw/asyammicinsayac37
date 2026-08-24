@@ -295,6 +295,80 @@
         border-color: #f5c51822;
       }
     }
+    .net-btn {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      z-index: 100;
+      padding: 10px 18px;
+      border-radius: 22px;
+      background: rgba(17,17,17,0.35);
+      border: 1px solid #f5c51833;
+      color: rgba(245,197,24,0.7);
+      font-weight: 800;
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 0.3s, color 0.3s, border-color 0.3s;
+    }
+    .net-btn:hover { color: #f5c518; border-color: #f5c518; transform: scale(1.05); }
+    @media (max-width: 600px) {
+      .net-btn {
+        bottom: 12px;
+        left: 12px;
+        padding: 8px 14px;
+        font-size: 0.78rem;
+      }
+    }
+    .net-modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 1200;
+      background: rgba(5,5,5,0.88);
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .net-modal.open { display: flex; }
+    .net-box {
+      width: 440px;
+      max-width: 92vw;
+      max-height: 88vh;
+      overflow-y: auto;
+      background: linear-gradient(145deg, #111, #0d0d0d);
+      border: 1px solid #f5c51844;
+      border-radius: 18px;
+      padding: 22px 22px 18px;
+      color: #e0e0e0;
+      position: relative;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+    }
+    .net-box h3 { color: #f5c518; margin: 0 0 14px; letter-spacing: 1px; font-size: 1.05rem; }
+    .net-group { margin-bottom: 16px; }
+    .net-group h4 { color: #f5c518aa; margin: 0 0 8px; font-size: 0.82rem; letter-spacing: 1px; }
+    .net-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 0.85rem; }
+    .net-name { width: 140px; flex-shrink: 0; }
+    .net-row label { display: flex; align-items: center; gap: 3px; font-size: 0.7rem; color: #999; }
+    .net-row input {
+      width: 50px; background: #0a0a0a; border: 1px solid #222; border-radius: 8px;
+      color: #e0e0e0; padding: 5px; text-align: center; font-size: 0.85rem;
+    }
+    .net-val { margin-left: auto; color: #f5c518; font-weight: 700; min-width: 52px; text-align: right; }
+    .net-total { border-top: 1px solid #222; padding-top: 12px; font-weight: 700; color: #f5c518; font-size: 0.95rem; }
+    .net-close {
+      position: absolute; top: 10px; right: 16px;
+      color: #555; font-size: 1.4rem; cursor: pointer; line-height: 1;
+    }
+    .net-close:hover { color: #f5c518; }
+    .net-note { font-size: 0.72rem; color: #888; margin: 0 0 12px; }
+    .net-box select {
+      width: 100%; margin-bottom: 10px; background: #0a0a0a; color: #e0e0e0;
+      border: 1px solid #222; border-radius: 8px; padding: 8px; font-size: 0.9rem;
+    }
+    .net-diploma-label { font-size: 0.8rem; color: #aaa; display: flex; align-items: center; gap: 6px; }
+    .net-diploma-label input { width: 70px; background: #0a0a0a; border: 1px solid #222; border-radius: 8px; color: #e0e0e0; padding: 6px; text-align: center; }
+    .net-results { border-top: 1px solid #222; padding-top: 12px; font-weight: 700; color: #f5c518; font-size: 0.92rem; line-height: 1.9; }
     .login-modal {
       position: fixed;
       top: 0;
@@ -748,6 +822,7 @@
   </div>
 
   <a class="top-right-btn" id="login-btn" href="#" title="37">37</a>
+  <a class="net-btn" id="net-btn" href="#" title="Net Hesapla">Net</a>
 
   <div class="login-modal" id="login-modal">
     <div class="login-box">
@@ -759,6 +834,41 @@
       <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
       <button id="login-submit">Giriş</button>
       <div class="login-msg" id="login-msg"></div>
+    </div>
+  </div>
+
+  <div class="net-modal" id="net-modal">
+    <div class="net-box">
+      <span class="net-close" id="net-close">&times;</span>
+      <h3>Net &amp; Puan Hesaplama</h3>
+      <p class="net-note">2025 ÖSYM katsayılarıyla hesaplanır (2027 sınavında ÖSYM güncelleyebilir).</p>
+
+      <div class="net-group">
+        <h4>TYT Testleri</h4>
+        <div id="tyt-tests"></div>
+      </div>
+
+      <div class="net-group">
+        <h4>AYT Puan Türü</h4>
+        <select id="net-type">
+          <option value="say">SAY (Sayısal)</option>
+          <option value="ea">EA (Eşit Ağırlık)</option>
+          <option value="soz">SÖZ (Sözel)</option>
+          <option value="dil">DİL</option>
+        </select>
+        <div id="ayt-tests"></div>
+      </div>
+
+      <div class="net-group">
+        <h4>Diploma Notu (OBP, opsiyonel)</h4>
+        <label class="net-diploma-label">Not (0-100): <input type="number" id="net-diploma" min="0" max="100" value="80"></label>
+      </div>
+
+      <div class="net-results">
+        <div>TYT Ham Puan: <span id="res-tyt">0,00</span></div>
+        <div id="res-ayt-wrap">SAY Ham Puan: <span id="res-ayt">0,00</span></div>
+        <div>Yerleştirme Puanı (OBP'li): <span id="res-yer">0,00</span></div>
+      </div>
     </div>
   </div>
 
@@ -1316,6 +1426,86 @@
     function deleteMessage(id) {
       db.collection('messages').doc(id).delete().catch(err => { alert('Silinemedi: ' + (err && err.message ? err.message : err)); });
     }
+
+    const netBtn = document.getElementById('net-btn');
+    const netModal = document.getElementById('net-modal');
+    const netClose = document.getElementById('net-close');
+    const netType = document.getElementById('net-type');
+    const tytTests = document.getElementById('tyt-tests');
+    const aytTests = document.getElementById('ayt-tests');
+    const netDiploma = document.getElementById('net-diploma');
+
+    const TEST_DEFS = {
+      tyt: [ {key:'tr',name:'Türkçe'}, {key:'sb',name:'Sosyal Bilimler'}, {key:'tm',name:'Temel Matematik'}, {key:'fb',name:'Fen Bilimleri'} ],
+      say: [ {key:'mat',name:'Matematik'}, {key:'fiz',name:'Fizik'}, {key:'kim',name:'Kimya'}, {key:'biy',name:'Biyoloji'} ],
+      ea:  [ {key:'mat',name:'Matematik'}, {key:'edb',name:'Edebiyat'}, {key:'tar1',name:'Tarih-1'}, {key:'cograf1',name:'Coğrafya-1'} ],
+      soz: [ {key:'edb',name:'Edebiyat'}, {key:'tar1',name:'Tarih-1'}, {key:'cograf1',name:'Coğrafya-1'}, {key:'tar2',name:'Tarih-2'}, {key:'cograf2',name:'Coğrafya-2'}, {key:'fel',name:'Felsefe'}, {key:'dkab',name:'DKAB'} ],
+      dil: [ {key:'yd',name:'Yabancı Dil'} ]
+    };
+    const CO = {
+      tyt: { tr:2.83, sb:2.99, tm:3.28, fb:2.53 },
+      say: { tr:1.20, sb:1.27, tm:1.39, fb:1.07, mat:2.89, fiz:2.46, kim:2.53, biy:2.61 },
+      ea:  { tr:1.19, sb:1.26, tm:1.38, fb:1.07, mat:2.88, edb:2.94, tar1:2.53, cograf1:2.85 },
+      soz: { tr:1.13, sb:1.19, tm:1.31, fb:1.01, edb:2.79, tar1:2.39, cograf1:2.70, tar2:3.80, cograf2:2.47, fel:3.76, dkab:2.36 },
+      dil: { tr:1.53, sb:1.62, tm:1.77, fb:1.37, yd:2.60 }
+    };
+    const START = { tyt:145.47, say:132.87, ea:129.34, soz:129.61, dil:105.92 };
+
+    function buildRows(container, defs) {
+      container.innerHTML = '';
+      defs.forEach(d => {
+        const row = document.createElement('div');
+        row.className = 'net-row';
+        row.dataset.key = d.key;
+        row.innerHTML = '<span class="net-name">' + d.name + '</span>' +
+          '<label>Doğru<input type="number" class="net-dogru" min="0" value="0"></label>' +
+          '<label>Yanlış<input type="number" class="net-yanlis" min="0" value="0"></label>' +
+          '<span class="net-val">0,00</span>';
+        container.appendChild(row);
+      });
+    }
+    function readNets() {
+      const nets = {};
+      document.querySelectorAll('#tyt-tests .net-row, #ayt-tests .net-row').forEach(row => {
+        const k = row.dataset.key;
+        const d = parseFloat(row.querySelector('.net-dogru').value) || 0;
+        const y = parseFloat(row.querySelector('.net-yanlis').value) || 0;
+        let net = d - y / 4; if (net < 0) net = 0;
+        row.querySelector('.net-val').textContent = net.toFixed(2).replace('.', ',');
+        nets[k] = net;
+      });
+      return nets;
+    }
+    function recalc() {
+      const nets = readNets();
+      let tyt = START.tyt + nets.tr * CO.tyt.tr + nets.sb * CO.tyt.sb + nets.tm * CO.tyt.tm + nets.fb * CO.tyt.fb;
+      const type = netType.value;
+      const tco = CO[type];
+      let ayt = START[type] + nets.tr * tco.tr + nets.sb * tco.sb + nets.tm * tco.tm + nets.fb * tco.fb;
+      TEST_DEFS[type].forEach(t => { ayt += (nets[t.key] || 0) * tco[t.key]; });
+      const dip = parseFloat(netDiploma.value) || 0;
+      const yer = ayt + dip * 0.6;
+      document.getElementById('res-tyt').textContent = tyt.toFixed(2).replace('.', ',');
+      document.getElementById('res-ayt').textContent = ayt.toFixed(2).replace('.', ',');
+      document.getElementById('res-yer').textContent = yer.toFixed(2).replace('.', ',');
+      const labelMap = { say:'SAY', ea:'EA', soz:'SÖZ', dil:'DİL' };
+      document.getElementById('res-ayt-wrap').firstChild.textContent = labelMap[type] + ' Ham Puan: ';
+    }
+    function rebuildAyt() {
+      buildRows(aytTests, TEST_DEFS[netType.value]);
+      recalc();
+    }
+
+    netBtn.addEventListener('click', (e) => { e.preventDefault(); netModal.classList.add('open'); });
+    netClose.addEventListener('click', () => netModal.classList.remove('open'));
+    netModal.addEventListener('click', (e) => { if (e.target === netModal) netModal.classList.remove('open'); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') netModal.classList.remove('open'); });
+    netType.addEventListener('change', rebuildAyt);
+    netDiploma.addEventListener('input', recalc);
+    document.addEventListener('input', (e) => { if (e.target.classList && (e.target.classList.contains('net-dogru') || e.target.classList.contains('net-yanlis'))) recalc(); });
+
+    buildRows(tytTests, TEST_DEFS.tyt);
+    rebuildAyt();
 
     const API_URL = 'https://yks-sayac.onrender.com';
     if (!location.hostname.includes('localhost') && !location.hostname.includes('127.0.0.1') && !location.hostname.includes('::1')) {
