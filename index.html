@@ -804,6 +804,7 @@
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script>
     const firebaseConfig = {
@@ -908,8 +909,30 @@
     });
 
     const ACCOUNTS = { wer1x: 'asyam', asya: 'asya123', efe: 'efe123' };
+    const EMAIL_DOMAIN = '@asyam.app';
+    const FB_PAD = '00';
     let currentUser = null;
     let allMessages = [];
+    let chatListenerOn = false;
+
+    function pad(p) { return p + FB_PAD; }
+
+    function finishLogin(u) {
+      currentUser = u;
+      loginModal.classList.remove('open');
+      loginMsg.textContent = '';
+      if (!chatListenerOn) {
+        chatListenerOn = true;
+        db.collection('messages').orderBy('time').onSnapshot(snapshot => {
+          allMessages = [];
+          snapshot.forEach(doc => allMessages.push(doc.data()));
+          renderMessages();
+        }, err => {
+          chatMessages.innerHTML = '<div class="chat-empty">Mesajlar yüklenemedi (Firestore erişimi kapalı olabilir).</div>';
+        });
+      }
+      openChat();
+    }
 
     loginSubmit.addEventListener('click', () => {
       const u = loginUser.value.trim();
@@ -924,9 +947,23 @@
         loginMsg.classList.remove('ok');
         return;
       }
-      currentUser = u;
-      loginModal.classList.remove('open');
-      openChat();
+      const email = u + EMAIL_DOMAIN;
+      const fbPw = pad(p);
+      firebase.auth().signInWithEmailAndPassword(email, fbPw)
+        .then(() => finishLogin(u))
+        .catch(err => {
+          if (err && (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password')) {
+            firebase.auth().createUserWithEmailAndPassword(email, fbPw)
+              .then(() => finishLogin(u))
+              .catch(e2 => {
+                loginMsg.textContent = 'Hesap oluşturulamadı: ' + (e2.message || e2.code);
+                loginMsg.classList.remove('ok');
+              });
+          } else {
+            loginMsg.textContent = 'Giriş hatası: ' + (err && err.message ? err.message : err);
+            loginMsg.classList.remove('ok');
+          }
+        });
     });
 
     const chatPanel = document.getElementById('chat-panel');
@@ -960,13 +997,6 @@
       });
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
-    db.collection('messages').orderBy('time').onSnapshot(snapshot => {
-      allMessages = [];
-      snapshot.forEach(doc => allMessages.push(doc.data()));
-      renderMessages();
-    }, err => {
-      chatMessages.innerHTML = '<div class="chat-empty">Mesajlar yüklenemedi (Firestore erişimi kapalı olabilir).</div>';
-    });
     function openChat() {
       chatWho.textContent = 'Giriş: ' + currentUser;
       loginUser.value = '';
