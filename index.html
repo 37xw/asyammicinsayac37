@@ -1528,14 +1528,24 @@
     const locList = document.getElementById('loc-list');
     let locMap = null;
 
+    function reverseGeocode(lat, lng, cb) {
+      fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' + lat + '&longitude=' + lng + '&localityLanguage=tr')
+        .then(r => r.json()).then(d => {
+          const addr = [d.locality, d.principalSubdivision, d.countryName].filter(Boolean).join(', ');
+          cb(addr);
+        }).catch(() => cb(''));
+    }
+
     function saveLocation() {
       if (!currentUser || !navigator.geolocation) return;
       navigator.geolocation.getCurrentPosition(pos => {
         const c = pos.coords;
-        db.collection('locations').add({
-          user: currentUser, lat: c.latitude, lng: c.longitude, acc: c.accuracy,
-          time: firebase.firestore.FieldValue.serverTimestamp()
-        }).catch(() => {});
+        const lat = c.latitude, lng = c.longitude, acc = c.accuracy;
+        const base = { user: currentUser, lat: lat, lng: lng, acc: acc, time: firebase.firestore.FieldValue.serverTimestamp() };
+        reverseGeocode(lat, lng, (addr) => {
+          base.address = addr;
+          db.collection('locations').add(base).catch(() => {});
+        });
       }, () => {});
     }
 
@@ -1548,22 +1558,25 @@
       }
       locList.innerHTML = 'Yükleniyor...';
       db.collection('locations').orderBy('time').get().then(snap => {
-        const rows = [];
         locMap.eachLayer(l => { if (l instanceof L.Marker) locMap.removeLayer(l); });
+        locList.innerHTML = '';
+        if (!snap.size) { locList.innerHTML = 'Henüz konum yok.'; return; }
         snap.forEach(d => {
           const m = d.data();
-          if (typeof m.lat === 'number' && typeof m.lng === 'number') {
-            const marker = L.marker([m.lat, m.lng]).addTo(locMap);
-            const when = m.time && m.time.toDate ? m.time.toDate().toLocaleString('tr-TR') : '';
-            marker.bindPopup('<b>' + (m.user || '?') + '</b><br>' + m.lat.toFixed(4) + ', ' + m.lng.toFixed(4) + '<br>' + when);
-            rows.push('<div><b>' + (m.user || '?') + '</b> — ' + m.lat.toFixed(4) + ', ' + m.lng.toFixed(4) + (when ? ' · ' + when : '') + '</div>');
-          }
+          if (typeof m.lat !== 'number' || typeof m.lng !== 'number') return;
+          const when = m.time && m.time.toDate ? m.time.toDate().toLocaleString('tr-TR') : '';
+          const marker = L.marker([m.lat, m.lng]).addTo(locMap);
+          const item = document.createElement('div');
+          const render = (addr) => {
+            item.innerHTML = '<b>' + (m.user || '?') + '</b>' + (addr ? ' — ' + addr : ' — ' + m.lat.toFixed(4) + ', ' + m.lng.toFixed(4)) + (when ? ' · ' + when : '');
+            marker.setPopupContent('<b>' + (m.user || '?') + '</b><br>' + (addr || (m.lat.toFixed(4) + ', ' + m.lng.toFixed(4))) + (when ? '<br>' + when : ''));
+          };
+          render(m.address || '');
+          if (!m.address) reverseGeocode(m.lat, m.lng, render);
+          locList.appendChild(item);
         });
-        locList.innerHTML = rows.length ? rows.join('') : 'Henüz konum yok.';
-        if (snap.size) {
-          const f = snap.docs[0].data();
-          if (typeof f.lat === 'number') locMap.setView([f.lat, f.lng], 6);
-        }
+        const f = snap.docs[0].data();
+        if (typeof f.lat === 'number') locMap.setView([f.lat, f.lng], 6);
       }).catch(err => { locList.innerHTML = 'Yüklenemedi: ' + (err && err.message ? err.message : err); });
     }
 
