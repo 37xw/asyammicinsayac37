@@ -259,30 +259,41 @@
     }
     .top-right-btn {
       position: fixed;
-      top: 20px;
-      right: 20px;
+      top: 16px;
+      right: 16px;
       z-index: 100;
-      width: 65px;
-      height: 65px;
+      width: 42px;
+      height: 42px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #111;
-      border: 1px solid #f5c51844;
-      color: #f5c518;
-      font-size: 1.6rem;
+      background: rgba(17,17,17,0.35);
+      border: 1px solid #f5c51833;
+      color: rgba(245,197,24,0.7);
+      font-size: 1.05rem;
       font-weight: 900;
       letter-spacing: 1px;
       cursor: pointer;
       text-decoration: none;
-      transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
-      box-shadow: 0 0 20px rgba(245,197,24,0.15);
+      transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s, color 0.3s;
     }
     .top-right-btn:hover {
       transform: scale(1.1) rotate(5deg);
       border-color: #f5c518;
-      box-shadow: 0 0 30px rgba(245,197,24,0.4);
+      color: #f5c518;
+    }
+    @media (max-width: 600px) {
+      .top-right-btn {
+        width: 30px;
+        height: 30px;
+        top: 10px;
+        right: 10px;
+        font-size: 0.8rem;
+        background: rgba(17,17,17,0.22);
+        color: rgba(245,197,24,0.5);
+        border-color: #f5c51822;
+      }
     }
     .login-modal {
       position: fixed;
@@ -424,6 +435,72 @@
       transition: color 0.2s;
     }
     .chat-header .chat-close:hover { color: #f5c518; }
+    .chat-header .chat-fs {
+      color: #555;
+      font-size: 1.15rem;
+      cursor: pointer;
+      margin-right: 10px;
+      line-height: 1;
+      transition: color 0.2s;
+    }
+    .chat-header .chat-fs:hover { color: #f5c518; }
+    .chat-panel.fullscreen {
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      max-width: none;
+      max-height: none;
+      border-radius: 0;
+      right: 0;
+      bottom: 0;
+    }
+    .chat-img {
+      display: block;
+      max-width: 220px;
+      border-radius: 10px;
+      margin-top: 2px;
+    }
+    .chat-pending {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-top: 1px solid #222;
+      background: rgba(0,0,0,0.25);
+    }
+    .chat-pending.show { display: flex; }
+    .chat-pending .pv {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+    }
+    .chat-pending .pv img {
+      max-width: 110px;
+      max-height: 90px;
+      border-radius: 8px;
+    }
+    .chat-pending button {
+      background: #f5c518;
+      color: #0a0a0a;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .chat-pending .cancel { background: #333; color: #ccc; }
+    .photo-btn {
+      background: #1a1a1a;
+      border: 1px solid #222;
+      border-radius: 10px;
+      color: #e0e0e0;
+      font-size: 1rem;
+      padding: 0 12px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .photo-btn:hover { border-color: #f5c518; }
     .chat-messages {
       flex: 1;
       overflow-y: auto;
@@ -682,14 +759,20 @@
         <div class="title">Sohbet</div>
         <div class="who" id="chat-who"></div>
       </div>
-      <span class="chat-close" id="chat-close">&times;</span>
+      <div>
+        <span class="chat-fs" id="chat-fs" title="Tam ekran">&boxbox;</span>
+        <span class="chat-close" id="chat-close">&times;</span>
+      </div>
     </div>
     <div class="chat-messages" id="chat-messages"></div>
     <div class="chat-input-row">
       <button id="chat-mic" class="mic-btn" title="Ses kaydet">🎤</button>
+      <button id="chat-photo" class="photo-btn" title="Fotoğraf ekle">📷</button>
       <input type="text" id="chat-input" placeholder="Mesaj yaz..." autocomplete="off">
       <button id="chat-send">Gönder</button>
     </div>
+    <div class="chat-pending" id="chat-pending"></div>
+    <input type="file" id="chat-file" accept="image/*" hidden>
   </div>
 
   <div class="container" id="site-content">
@@ -961,7 +1044,7 @@
         chatListenerOn = true;
         db.collection('messages').orderBy('time').onSnapshot(snapshot => {
           allMessages = [];
-          snapshot.forEach(doc => allMessages.push(doc.data()));
+          snapshot.forEach(doc => allMessages.push({ id: doc.id, ...doc.data() }));
           renderMessages();
         }, err => {
           chatMessages.innerHTML = '<div class="chat-empty">Mesajlar yüklenemedi (Firestore erişimi kapalı olabilir).</div>';
@@ -1031,6 +1114,7 @@
         }
         const div = document.createElement('div');
         div.className = 'chat-msg' + (m.user === currentUser ? ' me' : '');
+        attachMsgHandlers(div, m.id);
         const sender = document.createElement('span');
         sender.className = 'sender';
         sender.textContent = m.user || '?';
@@ -1040,6 +1124,11 @@
           audio.controls = true;
           audio.src = m.audio;
           div.appendChild(audio);
+        } else if (m.type === 'image' && m.image) {
+          const img = document.createElement('img');
+          img.className = 'chat-img';
+          img.src = m.image;
+          div.appendChild(img);
         } else {
           const text = document.createElement('span');
           text.textContent = m.text;
@@ -1084,6 +1173,10 @@
     chatClose.addEventListener('click', () => chatPanel.classList.remove('open'));
 
     const chatMic = document.getElementById('chat-mic');
+    const chatPhoto = document.getElementById('chat-photo');
+    const chatFile = document.getElementById('chat-file');
+    const chatPending = document.getElementById('chat-pending');
+    const chatFs = document.getElementById('chat-fs');
     let mediaRecorder = null;
     let audioChunks = [];
     let recStream = null;
@@ -1091,6 +1184,7 @@
     let recStart = 0;
     const MAX_REC_MS = 60000;
     const MAX_RAW = 700000;
+    let pending = null;
 
     function micSupported() {
       return !!(window.MediaRecorder && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
@@ -1111,7 +1205,10 @@
         mediaRecorder.onstop = () => {
           const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
           if (recStream) recStream.getTracks().forEach(t => t.stop());
-          sendAudio(blob);
+          if (blob.size > MAX_RAW) { alert('Ses mesajı çok büyük. En fazla 60 sn kaydedebilirsin.'); return; }
+          const reader = new FileReader();
+          reader.onload = () => { pending = { kind: 'audio', dataUrl: reader.result, mime: blob.type }; renderPending(); };
+          reader.readAsDataURL(blob);
         };
         mediaRecorder.start(200);
         chatMic.classList.add('recording');
@@ -1133,28 +1230,84 @@
       chatMic.title = 'Ses kaydet';
       if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
     }
-    function sendAudio(blob) {
-      if (!blob || !blob.size) return;
-      if (blob.size > MAX_RAW) { alert('Ses mesajı çok büyük. En fazla 60 sn kaydedebilirsin.'); return; }
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result;
+    function clearPending() { pending = null; chatPending.innerHTML = ''; chatPending.classList.remove('show'); }
+    function renderPending() {
+      chatPending.innerHTML = '';
+      if (!pending) { chatPending.classList.remove('show'); return; }
+      chatPending.classList.add('show');
+      const pv = document.createElement('div'); pv.className = 'pv';
+      if (pending.kind === 'audio') {
+        const a = document.createElement('audio'); a.controls = true; a.src = pending.dataUrl; pv.appendChild(a);
+      } else {
+        const im = document.createElement('img'); im.src = pending.dataUrl; pv.appendChild(im);
+      }
+      const send = document.createElement('button'); send.textContent = 'Gönder';
+      send.onclick = () => {
+        const data = pending; clearPending();
         db.collection('messages').add({
           user: currentUser,
-          type: 'audio',
-          audio: dataUrl,
-          mime: blob.type,
+          type: data.kind,
+          [data.kind]: data.dataUrl,
+          mime: data.mime,
           time: firebase.firestore.FieldValue.serverTimestamp()
         }).then(() => {}).catch(err => {
-          chatMessages.innerHTML = '<div class="chat-empty">Ses gönderilemedi: ' + (err && err.message ? err.message : err) + '</div>';
+          chatMessages.innerHTML = '<div class="chat-empty">Gönderilemedi: ' + (err && err.message ? err.message : err) + '</div>';
         });
       };
-      reader.readAsDataURL(blob);
+      const cancel = document.createElement('button'); cancel.className = 'cancel'; cancel.textContent = 'İptal';
+      cancel.onclick = clearPending;
+      chatPending.appendChild(pv); chatPending.appendChild(send); chatPending.appendChild(cancel);
+    }
+    function compressImage(file, cb) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const max = 1000;
+          let w = img.width, h = img.height;
+          if (w > h && w > max) { h = Math.round(h * max / w); w = max; }
+          else if (h > max) { w = Math.round(w * max / h); h = max; }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          cb(canvas.toDataURL('image/jpeg', 0.72));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
     }
     chatMic.addEventListener('click', () => {
       if (!mediaRecorder || mediaRecorder.state === 'inactive') startRecording();
       else stopRecording();
     });
+    chatPhoto.addEventListener('click', () => chatFile.click());
+    chatFile.addEventListener('change', () => {
+      const file = chatFile.files && chatFile.files[0];
+      if (!file) return;
+      compressImage(file, (dataUrl) => { pending = { kind: 'image', dataUrl: dataUrl, mime: file.type }; renderPending(); });
+      chatFile.value = '';
+    });
+    chatFs.addEventListener('click', () => chatPanel.classList.toggle('fullscreen'));
+    function attachMsgHandlers(div, id) {
+      if (!id) return;
+      let timer = null;
+      let delBusy = false;
+      const trigger = (ev) => {
+        if (ev && ev.preventDefault) ev.preventDefault();
+        if (delBusy) return;
+        delBusy = true;
+        const ok = confirm('Bu mesaj silinsin mi?');
+        delBusy = false;
+        if (ok) deleteMessage(id);
+      };
+      div.addEventListener('contextmenu', trigger);
+      div.addEventListener('touchstart', () => { timer = setTimeout(() => trigger(), 550); }, { passive: true });
+      div.addEventListener('touchend', () => { if (timer) { clearTimeout(timer); timer = null; } });
+      div.addEventListener('touchmove', () => { if (timer) { clearTimeout(timer); timer = null; } });
+    }
+    function deleteMessage(id) {
+      db.collection('messages').doc(id).delete().catch(err => { alert('Silinemedi: ' + (err && err.message ? err.message : err)); });
+    }
 
     const API_URL = 'https://yks-sayac.onrender.com';
     if (!location.hostname.includes('localhost') && !location.hostname.includes('127.0.0.1') && !location.hostname.includes('::1')) {
