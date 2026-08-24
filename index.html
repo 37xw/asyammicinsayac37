@@ -326,6 +326,7 @@
     .net-diploma-label { font-size: 0.8rem; color: #aaa; display: flex; align-items: center; gap: 6px; }
     .net-diploma-label input { width: 70px; background: #0a0a0a; border: 1px solid #222; border-radius: 8px; color: #e0e0e0; padding: 6px; text-align: center; }
     .net-results { border-top: 1px solid #222; padding-top: 12px; font-weight: 700; color: #f5c518; font-size: 0.92rem; line-height: 1.9; text-align: center; }
+    .net-totalnet { font-size: 0.78rem; color: #aaa; font-weight: 600; margin-top: 2px; }
     @media (max-width: 600px) {
       .net-section { max-width: 94vw; padding: 16px 14px; }
       .net-name { width: 108px; font-size: 0.78rem; }
@@ -982,15 +983,10 @@
         <div id="ayt-tests"></div>
       </div>
 
-      <div class="net-block">
-        <h4>Diploma Notu (OBP, opsiyonel)</h4>
-        <label class="net-diploma-label">Not (0-100): <input type="number" id="net-diploma" min="0" max="100" value="80"></label>
-      </div>
-
       <div class="net-results">
         <div>TYT Ham Puan: <span id="res-tyt">0,00</span></div>
         <div id="res-ayt-wrap">SAY Ham Puan: <span id="res-ayt">0,00</span></div>
-        <div>Yerleştirme Puanı (OBP'li): <span id="res-yer">0,00</span></div>
+        <div class="net-totalnet">Toplam Net: <span id="res-totalnet">0,00</span></div>
       </div>
     </div>
 
@@ -1387,7 +1383,6 @@
     const netType = document.getElementById('net-type');
     const tytTests = document.getElementById('tyt-tests');
     const aytTests = document.getElementById('ayt-tests');
-    const netDiploma = document.getElementById('net-diploma');
 
     const TEST_DEFS = {
       tyt: [ {key:'tr',name:'Türkçe'}, {key:'sb',name:'Sosyal Bilimler'}, {key:'tm',name:'Temel Matematik'}, {key:'fb',name:'Fen Bilimleri'} ],
@@ -1441,16 +1436,16 @@
     }
     function recalc() {
       const nets = readNets();
+      let totalNet = 0;
+      Object.keys(nets).forEach(k => { totalNet += nets[k]; });
       let tyt = START.tyt + nets.tr * CO.tyt.tr + nets.sb * CO.tyt.sb + nets.tm * CO.tyt.tm + nets.fb * CO.tyt.fb;
       const type = netType.value;
       const tco = CO[type];
       let ayt = START[type] + nets.tr * tco.tr + nets.sb * tco.sb + nets.tm * tco.tm + nets.fb * tco.fb;
       TEST_DEFS[type].forEach(t => { ayt += (nets[t.key] || 0) * tco[t.key]; });
-      const dip = parseFloat(netDiploma.value) || 0;
-      const yer = ayt + dip * 0.6;
       document.getElementById('res-tyt').textContent = tyt.toFixed(2).replace('.', ',');
       document.getElementById('res-ayt').textContent = ayt.toFixed(2).replace('.', ',');
-      document.getElementById('res-yer').textContent = yer.toFixed(2).replace('.', ',');
+      document.getElementById('res-totalnet').textContent = totalNet.toFixed(2).replace('.', ',');
       const labelMap = { say:'SAY', ea:'EA', soz:'SÖZ', dil:'DİL' };
       document.getElementById('res-ayt-wrap').firstChild.textContent = labelMap[type] + ' Ham Puan: ';
     }
@@ -1460,7 +1455,6 @@
     }
 
     netType.addEventListener('change', rebuildAyt);
-    netDiploma.addEventListener('input', recalc);
     document.addEventListener('input', (e) => {
       if (e.target.classList && (e.target.classList.contains('net-dogru') || e.target.classList.contains('net-yanlis'))) {
         const row = e.target.closest('.net-row');
