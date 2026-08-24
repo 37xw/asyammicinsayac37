@@ -464,6 +464,15 @@
       margin-top: 3px;
       text-align: right;
     }
+    .chat-date-sep {
+      align-self: center;
+      font-size: 0.62rem;
+      color: #999;
+      background: rgba(255,255,255,0.06);
+      padding: 2px 12px;
+      border-radius: 10px;
+      margin: 6px 0 4px;
+    }
     .chat-empty {
       margin: auto;
       color: #444;
@@ -959,6 +968,16 @@
     const chatWho = document.getElementById('chat-who');
     const chatClose = document.getElementById('chat-close');
 
+    function formatDateLabel(d) {
+      const today = new Date();
+      const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+      const yest = new Date(); yest.setDate(today.getDate() - 1);
+      if (sameDay(d, today)) return 'Bugün';
+      if (sameDay(d, yest)) return 'Dün';
+      const aylar = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+      return d.getDate() + ' ' + aylar[d.getMonth()] + ' ' + d.getFullYear();
+    }
+
     function renderMessages() {
       const msgs = allMessages;
       chatMessages.innerHTML = '';
@@ -969,7 +988,22 @@
         chatMessages.appendChild(empty);
         return;
       }
+      let lastDay = '';
       msgs.forEach(m => {
+        let d = null;
+        if (m.time) {
+          try { d = (typeof m.time.toDate === 'function') ? m.time.toDate() : new Date(m.time); } catch (e) { d = null; }
+        }
+        if (d && !isNaN(d.getTime())) {
+          const dayKey = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+          if (dayKey !== lastDay) {
+            lastDay = dayKey;
+            const sep = document.createElement('div');
+            sep.className = 'chat-date-sep';
+            sep.textContent = formatDateLabel(d);
+            chatMessages.appendChild(sep);
+          }
+        }
         const div = document.createElement('div');
         div.className = 'chat-msg' + (m.user === currentUser ? ' me' : '');
         const sender = document.createElement('span');
@@ -979,19 +1013,13 @@
         text.textContent = m.text;
         div.appendChild(sender);
         div.appendChild(text);
-        if (m.time) {
-          let d = null;
-          try { d = (typeof m.time.toDate === 'function') ? m.time.toDate() : new Date(m.time); } catch (e) { d = null; }
-          if (d && !isNaN(d.getTime())) {
-            const time = document.createElement('span');
-            time.className = 'msg-time';
-            const hh = String(d.getHours()).padStart(2, '0');
-            const mm = String(d.getMinutes()).padStart(2, '0');
-            const dd = String(d.getDate()).padStart(2, '0');
-            const mo = String(d.getMonth() + 1).padStart(2, '0');
-            time.textContent = hh + ':' + mm + ' · ' + dd + '.' + mo;
-            div.appendChild(time);
-          }
+        if (d && !isNaN(d.getTime())) {
+          const time = document.createElement('span');
+          time.className = 'msg-time';
+          const hh = String(d.getHours()).padStart(2, '0');
+          const mm = String(d.getMinutes()).padStart(2, '0');
+          time.textContent = hh + ':' + mm;
+          div.appendChild(time);
         }
         chatMessages.appendChild(div);
       });
