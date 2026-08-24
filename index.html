@@ -1254,7 +1254,7 @@
     let recStream = null;
     let recTimer = null;
     let recStart = 0;
-    const MAX_REC_MS = 120000;
+    const MAX_REC_MS = 100000;
     const MAX_RAW = 760000;
     let pending = null;
 
@@ -1272,7 +1272,8 @@
         recStream = stream;
         audioChunks = [];
         const mime = pickMime();
-        mediaRecorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+        const recOptions = mime ? { mimeType: mime, audioBitsPerSecond: 32000 } : { audioBitsPerSecond: 32000 };
+        mediaRecorder = new MediaRecorder(stream, recOptions);
         mediaRecorder.ondataavailable = e => { if (e.data && e.data.size) audioChunks.push(e.data); };
         mediaRecorder.onstop = () => {
           const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
@@ -1289,7 +1290,7 @@
         recTimer = setInterval(() => {
           const s = Math.floor((Date.now() - recStart) / 1000);
           chatMic.title = 'Kaydediliyor ' + s + 'sn';
-          if (s >= MAX_REC_MS / 1000) { stopRecording(); alert('Süre doldu (120 sn), kayıt otomatik durduruldu. Sesi Gönder ile yollayabilirsin.'); }
+          if (s >= MAX_REC_MS / 1000) { stopRecording(); alert('Süre doldu (100 sn), kayıt otomatik durduruldu. Sesi Gönder ile yollayabilirsin.'); }
         }, 500);
       }).catch(err => {
         alert('Mikrofon açılamadı: ' + (err && err.message ? err.message : err));
