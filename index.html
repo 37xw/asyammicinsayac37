@@ -284,6 +284,102 @@
       border-color: #f5c518;
       box-shadow: 0 0 30px rgba(245,197,24,0.4);
     }
+    .login-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 1000;
+      background: rgba(5,5,5,0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .login-modal.open {
+      display: flex;
+    }
+    .login-box {
+      width: 320px;
+      max-width: 90vw;
+      background: linear-gradient(145deg, #111, #0d0d0d);
+      border: 1px solid #f5c51844;
+      border-radius: 20px;
+      padding: 32px 28px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.9), inset 0 1px 0 #f5c51811;
+      position: relative;
+    }
+    .login-box h3 {
+      text-align: center;
+      color: #f5c518;
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      margin-bottom: 24px;
+      text-transform: uppercase;
+    }
+    .login-box label {
+      display: block;
+      color: #888;
+      font-size: 0.8rem;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+    .login-box input {
+      width: 100%;
+      background: #0a0a0a;
+      border: 1px solid #222;
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: #e0e0e0;
+      font-size: 0.95rem;
+      font-family: 'Inter', sans-serif;
+      margin-bottom: 18px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    .login-box input:focus {
+      border-color: #f5c518;
+    }
+    .login-box button {
+      width: 100%;
+      background: #f5c518;
+      color: #0a0a0a;
+      border: none;
+      border-radius: 10px;
+      padding: 13px;
+      font-size: 0.95rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .login-box button:hover {
+      opacity: 0.9;
+      transform: translateY(-2px);
+    }
+    .login-msg {
+      text-align: center;
+      font-size: 0.85rem;
+      margin-top: 12px;
+      min-height: 18px;
+      color: #ee5253;
+    }
+    .login-msg.ok { color: #00d2d3; }
+    .login-close {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      color: #555;
+      font-size: 1.4rem;
+      cursor: pointer;
+      line-height: 1;
+      transition: color 0.2s;
+    }
+    .login-close:hover { color: #f5c518; }
     .splash {
       position: fixed;
       inset: 0;
@@ -412,7 +508,20 @@
     <div class="splash-text">37</div>
   </div>
 
-  <a class="top-right-btn" href="https://37xw.github.io/asyammicinsayac37" target="_blank" title="37">37</a>
+  <a class="top-right-btn" id="login-btn" href="#" title="37">37</a>
+
+  <div class="login-modal" id="login-modal">
+    <div class="login-box">
+      <span class="login-close" id="login-close">&times;</span>
+      <h3>Giriş Yap</h3>
+      <label for="login-user">Kullanıcı Adı</label>
+      <input type="text" id="login-user" placeholder="kullanıcı adı" autocomplete="username">
+      <label for="login-pass">Şifre</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+      <button id="login-submit">Giriş</button>
+      <div class="login-msg" id="login-msg"></div>
+    </div>
+  </div>
 
   <div class="container" id="site-content">
     <header>
@@ -628,6 +737,43 @@
     });
     document.addEventListener('click', () => {
       document.getElementById('contact-popup').classList.remove('open');
+    });
+
+    const loginBtn = document.getElementById('login-btn');
+    const loginModal = document.getElementById('login-modal');
+    const loginClose = document.getElementById('login-close');
+    const loginSubmit = document.getElementById('login-submit');
+    const loginUser = document.getElementById('login-user');
+    const loginPass = document.getElementById('login-pass');
+    const loginMsg = document.getElementById('login-msg');
+
+    loginBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      loginModal.classList.add('open');
+      loginMsg.textContent = '';
+      loginMsg.classList.remove('ok');
+      setTimeout(() => loginUser.focus(), 100);
+    });
+
+    loginClose.addEventListener('click', () => loginModal.classList.remove('open'));
+    loginModal.addEventListener('click', (e) => {
+      if (e.target === loginModal) loginModal.classList.remove('open');
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') loginModal.classList.remove('open');
+    });
+
+    loginSubmit.addEventListener('click', () => {
+      const u = loginUser.value.trim();
+      const p = loginPass.value;
+      if (!u || !p) {
+        loginMsg.textContent = 'Lütfen kullanıcı adı ve şifre girin.';
+        loginMsg.classList.remove('ok');
+        return;
+      }
+      loginMsg.textContent = 'Giriş başarılı, hoş geldin ' + u + '!';
+      loginMsg.classList.add('ok');
+      setTimeout(() => loginModal.classList.remove('open'), 1500);
     });
 
     const API_URL = 'https://yks-sayac.onrender.com';
