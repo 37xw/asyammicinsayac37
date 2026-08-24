@@ -767,12 +767,14 @@
     <div class="chat-messages" id="chat-messages"></div>
     <div class="chat-input-row">
       <button id="chat-mic" class="mic-btn" title="Ses kaydet">🎤</button>
-      <button id="chat-photo" class="photo-btn" title="Fotoğraf ekle">📷</button>
+      <button id="chat-photo" class="photo-btn" title="Kamera ile çek">📷</button>
+      <button id="chat-galeri" class="photo-btn" title="Galeriden fotoğraf seç">Galeri</button>
       <input type="text" id="chat-input" placeholder="Mesaj yaz..." autocomplete="off">
       <button id="chat-send">Gönder</button>
     </div>
     <div class="chat-pending" id="chat-pending"></div>
     <input type="file" id="chat-file" accept="image/*" hidden>
+    <input type="file" id="chat-cam" accept="image/*" capture="environment" hidden>
   </div>
 
   <div class="container" id="site-content">
@@ -920,7 +922,7 @@
 
     <footer>
       <img src="https://www.karincadunyasi.com/forum/data/avatars/o/0/171.jpg?1590355619" alt="" style="width:80px;border-radius:50%;margin-bottom:8px;opacity:.6">
-      <br><span style="color:#b8860b;font-weight:400;font-size:1.2rem;font-style:italic;font-family:'Georgia','Times New Roman',serif;letter-spacing:1px;">senden adam olmaz</span>
+      <br><span style="color:#b8860b;font-weight:400;font-size:1.2rem;font-style:italic;font-family:'Georgia','Times New Roman',serif;letter-spacing:1px;">sana güveniyorum</span>
       <br><br>
       YKS Sayaç &copy; 2027 &mdash; Gerçek sınav tarihleri için ÖSYM'yi takip edin.
       <br>efe♡asya tarafından hazırlanmıştır.
@@ -1174,7 +1176,9 @@
 
     const chatMic = document.getElementById('chat-mic');
     const chatPhoto = document.getElementById('chat-photo');
+    const chatGaleri = document.getElementById('chat-galeri');
     const chatFile = document.getElementById('chat-file');
+    const chatCam = document.getElementById('chat-cam');
     const chatPending = document.getElementById('chat-pending');
     const chatFs = document.getElementById('chat-fs');
     let mediaRecorder = null;
@@ -1280,13 +1284,14 @@
       if (!mediaRecorder || mediaRecorder.state === 'inactive') startRecording();
       else stopRecording();
     });
-    chatPhoto.addEventListener('click', () => chatFile.click());
-    chatFile.addEventListener('change', () => {
-      const file = chatFile.files && chatFile.files[0];
+    function handleImageFile(file) {
       if (!file) return;
       compressImage(file, (dataUrl) => { pending = { kind: 'image', dataUrl: dataUrl, mime: file.type }; renderPending(); });
-      chatFile.value = '';
-    });
+    }
+    chatPhoto.addEventListener('click', () => chatCam.click());
+    chatGaleri.addEventListener('click', () => chatFile.click());
+    chatFile.addEventListener('change', () => { handleImageFile(chatFile.files && chatFile.files[0]); chatFile.value = ''; });
+    chatCam.addEventListener('change', () => { handleImageFile(chatCam.files && chatCam.files[0]); chatCam.value = ''; });
     chatFs.addEventListener('click', () => chatPanel.classList.toggle('fullscreen'));
     function attachMsgHandlers(div, id) {
       if (!id) return;
