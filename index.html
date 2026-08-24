@@ -803,6 +803,22 @@
     </footer>
   </div>
 
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDB6kvAvYUzifG5gCU228PLka1M6bT9aT4",
+      authDomain: "asyam37-56aec.firebaseapp.com",
+      projectId: "asyam37-56aec",
+      storageBucket: "asyam37-56aec.firebasestorage.app",
+      messagingSenderId: "505299436672",
+      appId: "1:505299436672:web:9f88c0d41ede981d4bd265",
+      measurementId: "G-L7XNL6FJ0M"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+  </script>
+
   <script>
     const dates = [
       { name: 'tyt', date: new Date('2027-06-19T10:15:00+03:00') },
@@ -893,7 +909,7 @@
 
     const ACCOUNTS = { wer1x: 'asyam', asya: 'asya123', efe: 'efe123' };
     let currentUser = null;
-    const CHAT_KEY = 'asyamChat_v1';
+    let allMessages = [];
 
     loginSubmit.addEventListener('click', () => {
       const u = loginUser.value.trim();
@@ -920,15 +936,8 @@
     const chatWho = document.getElementById('chat-who');
     const chatClose = document.getElementById('chat-close');
 
-    function loadMessages() {
-      try { return JSON.parse(localStorage.getItem(CHAT_KEY)) || []; }
-      catch (e) { return []; }
-    }
-    function saveMessages(msgs) {
-      localStorage.setItem(CHAT_KEY, JSON.stringify(msgs));
-    }
     function renderMessages() {
-      const msgs = loadMessages();
+      const msgs = allMessages;
       chatMessages.innerHTML = '';
       if (msgs.length === 0) {
         const empty = document.createElement('div');
@@ -942,7 +951,7 @@
         div.className = 'chat-msg' + (m.user === currentUser ? ' me' : '');
         const sender = document.createElement('span');
         sender.className = 'sender';
-        sender.textContent = m.user;
+        sender.textContent = m.user || '?';
         const text = document.createElement('span');
         text.textContent = m.text;
         div.appendChild(sender);
@@ -951,22 +960,30 @@
       });
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
+    db.collection('messages').orderBy('time').onSnapshot(snapshot => {
+      allMessages = [];
+      snapshot.forEach(doc => allMessages.push(doc.data()));
+      renderMessages();
+    }, err => {
+      chatMessages.innerHTML = '<div class="chat-empty">Mesajlar yüklenemedi (Firestore erişimi kapalı olabilir).</div>';
+    });
     function openChat() {
       chatWho.textContent = 'Giriş: ' + currentUser;
       loginUser.value = '';
       loginPass.value = '';
-      renderMessages();
       chatPanel.classList.add('open');
       chatInput.focus();
+      renderMessages();
     }
     function sendMessage() {
       const text = chatInput.value.trim();
       if (!text) return;
-      const msgs = loadMessages();
-      msgs.push({ user: currentUser, text: text, time: Date.now() });
-      saveMessages(msgs);
+      db.collection('messages').add({
+        user: currentUser,
+        text: text,
+        time: firebase.firestore.FieldValue.serverTimestamp()
+      });
       chatInput.value = '';
-      renderMessages();
     }
 
     chatSend.addEventListener('click', sendMessage);
