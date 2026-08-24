@@ -1001,6 +1001,7 @@
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyDB6kvAvYUzifG5gCU228PLka1M6bT9aT4",
@@ -1013,6 +1014,7 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    const storage = firebase.storage();
   </script>
 
   <script>
@@ -1191,10 +1193,10 @@
         sender.className = 'sender';
         sender.textContent = m.user || '?';
         div.appendChild(sender);
-        if (m.type === 'audio' && m.audio) {
+        if (m.type === 'audio' && (m.audioUrl || m.audio)) {
           const audio = document.createElement('audio');
           audio.controls = true;
-          audio.src = m.audio;
+          audio.src = m.audioUrl || m.audio;
           div.appendChild(audio);
         } else if (m.type === 'image' && m.image) {
           const img = document.createElement('img');
@@ -1255,7 +1257,7 @@
     let recTimer = null;
     let recStart = 0;
     const MAX_REC_MS = 100000;
-    const MAX_RAW = 760000;
+    const MAX_RAW = 25000000;
     let pending = null;
 
     function micSupported() {
@@ -1278,9 +1280,8 @@
         mediaRecorder.onstop = () => {
           const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
           if (recStream) recStream.getTracks().forEach(t => t.stop());
-          if (blob.size > MAX_RAW) { alert('Ses dosyası büyük, gönderilirken sorun olabilir.'); }
           const reader = new FileReader();
-          reader.onload = () => { pending = { kind: 'audio', dataUrl: reader.result, mime: blob.type }; renderPending(); };
+          reader.onload = () => { pending = { kind: 'audio', dataUrl: reader.result, blob: blob, mime: blob.type }; renderPending(); };
           reader.readAsDataURL(blob);
         };
         mediaRecorder.start(200);
@@ -1317,15 +1318,27 @@
       const send = document.createElement('button'); send.textContent = 'Gönder';
       send.onclick = () => {
         const data = pending; clearPending();
-        db.collection('messages').add({
-          user: currentUser,
-          type: data.kind,
-          [data.kind]: data.dataUrl,
-          mime: data.mime,
-          time: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(() => {}).catch(err => {
-          chatMessages.innerHTML = '<div class="chat-empty">Gönderilemedi: ' + (err && err.message ? err.message : err) + '</div>';
-        });
+        if (data.kind === 'audio' && data.blob) {
+          const ext = (data.mime && data.mime.indexOf('mp4') >= 0) ? 'mp4'
+            : (data.mime && data.mime.indexOf('aac') >= 0) ? 'aac'
+            : (data.mime && data.mime.indexOf('mpeg') >= 0) ? 'mp3' : 'webm';
+          const ref = storage.ref('voice/' + Date.now() + '_' + Math.random().toString(36).slice(2) + '.' + ext);
+          ref.put(data.blob).then(s => s.ref.getDownloadURL()).then(url => {
+            return db.collection('messages').add({
+              user: currentUser, type: 'audio', audioUrl: url, mime: data.mime,
+              time: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          }).catch(err => {
+            chatMessages.innerHTML = '<div class="chat-empty">Gönderilemedi: ' + (err && err.message ? err.message : err) + '</div>';
+          });
+        } else {
+          db.collection('messages').add({
+            user: currentUser, type: data.kind, [data.kind]: data.dataUrl, mime: data.mime,
+            time: firebase.firestore.FieldValue.serverTimestamp()
+          }).catch(err => {
+            chatMessages.innerHTML = '<div class="chat-empty">Gönderilemedi: ' + (err && err.message ? err.message : err) + '</div>';
+          });
+        }
       };
       const cancel = document.createElement('button'); cancel.className = 'cancel'; cancel.textContent = 'İptal';
       cancel.onclick = clearPending;
