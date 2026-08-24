@@ -1012,6 +1012,8 @@
         user: currentUser,
         text: text,
         time: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(() => {}).catch(err => {
+        chatMessages.innerHTML = '<div class="chat-empty">Mesaj gönderilemedi: ' + (err && err.message ? err.message : err) + '</div>';
       });
       chatInput.value = '';
     }
