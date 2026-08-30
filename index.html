@@ -1269,12 +1269,11 @@
     }
     function startRecording() {
       if (!micSupported()) { alert('Bu tarayıcı ses kaydını desteklemiyor.'); return; }
-      navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+      navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, sampleRate: 16000 } }).then(stream => {
         recStream = stream;
         audioChunks = [];
         const mime = pickMime();
-        const recOptions = mime ? { mimeType: mime, audioBitsPerSecond: 64000 } : { audioBitsPerSecond: 64000 };
-        mediaRecorder = new MediaRecorder(stream, recOptions);
+        mediaRecorder = mime ? new MediaRecorder(stream, { mimeType: mime, audioBitsPerSecond: 64000 }) : new MediaRecorder(stream, { audioBitsPerSecond: 64000 });
         mediaRecorder.ondataavailable = e => { if (e.data && e.data.size) audioChunks.push(e.data); };
         mediaRecorder.onstop = () => {
           const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
